@@ -1,0 +1,290 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Mister Fister</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+    const config = {
+        type: Phaser.AUTO,
+        width: 4000,
+        height: window.innerHeight,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                gravity: { y: 3000 },
+                debug: false
+            }
+        },
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+     const game = new Phaser.Game(config);
+
+    var player;
+    var platforms;
+    var cursors;
+    var acceleration = 0;
+    var walkSpeed = acceleration*400;
+    var jumpPower = -800
+    var jumping = false;
+    var allowDoubleJump = true;
+    var keyWDown = false;
+    var requestJab = false;
+    var movingleft = false;
+    var attacking = false;
+    var plupp = 420;
+    var goingup = true;
+    //this.cameras.main.width = window.innerWidth;
+
+    setInterval(function(){  
+        if(!goingup) {
+            plupp -= 10;
+        }  
+        if(goingup) {
+            plupp += 10;
+        }
+        if(plupp > 400) {
+            goingup = false;
+        }
+        if(plupp < 300) {
+            goingup = true;
+        }
+    }, 30);
+   
+    function platformerFollow() {
+        game.cameras.main.follow(player, Phaser.Camera.FOLLOW_PLATFORMER);
+        style = 'STYLE_PLATFORMER';
+    }
+
+    function randNum(max) {
+       return Math.floor(Math.random * max + 1);
+    }
+
+    function launchstar (player, stars) {
+        if (attacking && !movingleft) {
+        stars.setVelocityY(-1000);
+        stars.setVelocityX(1000);
+        }
+        if (attacking && movingleft) {
+        stars.setVelocityY(-1000);
+        stars.setVelocityX(-1000);
+        }
+        if (!attacking) {
+        player.disableBody(true,true);
+        }
+        
+    }
+
+
+
+    function preload ()
+    {
+        this.load.image('sky', 'assets/sky.png');
+        this.load.image('ground', 'assets/platform.png');
+        this.load.image('star', 'assets/star.png');
+        this.load.image('bomb', 'assets/bomb.png');
+        this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
+    }
+
+    function create ()
+    {
+        //this.world.setBounds(0, 0, 1400, 1400);
+
+        keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+        keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+        keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+        keyJ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
+        keyK = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K);
+        keyL = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+        keyÖ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Ö);
+        keyShift = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+
+        this.add.image(400, 300, 'sky');
+        this.add.image(1200, 300, 'sky');
+        this.add.image(2000, 300, 'sky');
+        this.add.image(2800, 300, 'sky');
+        this.add.image(3600, 300, 'sky');
+        bottomSky1 = this.add.image(400,  900, 'sky');
+        bottomSky2 = this.add.image(1200, 900, 'sky');
+        bottomSky3 = this.add.image(2000, 900, 'sky');
+        bottomSky4 = this.add.image(2800, 900, 'sky');
+        bottomSky5 = this.add.image(3600, 900, 'sky');
+    
+        bottomSky1.angle = 180;
+        bottomSky2.angle = 180;
+        bottomSky3.angle = 180;
+        bottomSky4.angle = 180;
+        bottomSky5.angle = 180;
+        
+        platforms = this.physics.add.staticGroup();
+
+        platforms.create(-400, 690, 'ground').setScale(50,2).refreshBody();
+        platforms.create(600, 500, 'ground');
+        platforms.create(50, 450, 'ground');
+        plat1 = platforms.create(750, 420, 'ground');
+
+
+        stars = this.physics.add.group ({
+            key: 'star',
+            repeat: 10,
+            setXY: {x:1000 , y: 600, stepX: 150} 
+        });
+
+
+        this.physics.add.collider(stars, platforms);
+        this.physics.add.collider(stars, player);
+
+        player = this.physics.add.sprite(800, 500, 'dude');
+
+        player.setCollideWorldBounds(true);
+
+        this.anims.create({
+            key: 'left',
+            frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'turn',
+            frames: [ { key: 'dude', frame: 4 } ],
+            frameRate: 20
+        });
+
+        this.anims.create({
+            key: 'right',
+            frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'jableft',
+            frames: this.anims.generateFrameNumbers('dude', { start: 9, end: 11 }),
+            frameRate: 50,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'jabright',
+            frames: this.anims.generateFrameNumbers('dude', { start: 12, end: 14 }),
+            frameRate: 50,
+            repeat: -1
+        });
+
+        
+
+        cursors = this.input.keyboard.createCursorKeys();
+
+        this.physics.add.collider(player, platforms);
+        this.physics.add.overlap(player, stars, launchstar, null, this);
+    }
+
+    function update ()
+    {
+        this.cameras.main.x = -player.x + 700;
+
+        plat1.y = plupp;
+        console.log(plat1); 
+
+        if (cursors.down.isDown)
+        {
+            //console.log(this.cameras.main);
+        }
+        
+        walkSpeed = acceleration*400;
+
+        //Sprint
+        if (keyShift.isDown) 
+        {
+            walkSpeed = acceleration*800;
+        }
+        
+        //Left
+        if (keyA.isDown)
+        {
+            if(!attacking) {player.anims.play('left', true);}
+            movingleft = true;
+            player.setVelocityX(walkSpeed);
+            if(acceleration > -1) {
+                acceleration += -0.5;
+            }
+        }
+        //Right
+        if (keyD.isDown)
+        {
+            movingleft = false;
+            player.setVelocityX(walkSpeed);
+            if(!attacking) {player.anims.play('right', true);}
+            if(acceleration < 1) {
+                acceleration += 0.5;
+            }
+        }
+        //Idle
+        if (!keyD.isDown && !keyA.isDown) {
+            player.setVelocityX(0);
+            acceleration = 0;
+            if (keyJ.isUp && keyK.isUp && keyL.isUp) {
+                player.anims.play('turn');
+            }
+        }
+        if (keyJ.isUp && keyK.isUp && keyL.isUp) {
+            attacking = false;
+        }
+        //Jab
+        if (keyJ.isDown) 
+        {
+            attacking=true;
+            if (movingleft) {
+                player.anims.play('jableft', true);
+            }
+            if (!movingleft) {
+                player.anims.play('jabright', true);
+            }
+        }
+        //Touching Ground
+        if (player.body.touching.down)
+        {
+            player.setVelocityY(0);
+            allowDoubleJump = true;
+        }
+        //Double Jump
+        if (keyW.isDown && allowDoubleJump && !(player.body.touching.down) && !(keyWDown)) {
+            allowDoubleJump = false;
+            player.setVelocityY((jumpPower*.9));
+            keyWDown = true;
+        }
+        //Jump
+        if (keyW.isDown && player.body.touching.down)
+        {
+            player.setVelocityY(jumpPower);
+            allowDoubleJump = true;
+            keyWDown = true;
+        }
+        //release Jump
+        if (keyW.isUp) 
+        {
+            keyWDown = false;
+        }
+
+        
+        
+    }
+
+</script>
+
+</body>
+</html>
